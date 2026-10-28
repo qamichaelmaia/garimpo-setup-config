@@ -56,6 +56,22 @@ class CollectOffersTests(unittest.TestCase):
             _matches_item("Fonte Corsair 850W 80 Plus Gold", power_supply_item)
         )
 
+    def test_rtx_5060_ti_filter_includes_8gb_and_16gb_cards(self):
+        video_card_item = {
+            "keywords": ["RTX 5060 Ti"],
+            "exclude_keywords": ["PC Gamer", "notebook", "laptop"],
+        }
+
+        self.assertTrue(
+            _matches_item("Placa de Vídeo RTX 5060 Ti 8GB", video_card_item)
+        )
+        self.assertTrue(
+            _matches_item("Placa de Vídeo RTX 5060 Ti 16GB", video_card_item)
+        )
+        self.assertFalse(
+            _matches_item("PC Gamer com RTX 5060 Ti 16GB", video_card_item)
+        )
+
     def test_ventoinha_filter_excludes_cpu_coolers(self):
         fan_item = {
             "keywords": ["fan", "fans", "ventoinha"],
@@ -92,6 +108,7 @@ class CollectOffersTests(unittest.TestCase):
                     "offer_photo": "/gpu.jpg",
                     "offer_status_name": "APPROVED",
                     "store_name": "Loja Exemplo",
+                    "offer_published": "2026-10-28T11:00:00-0300",
                 },
                 {
                     "offer_id": 2,
@@ -142,6 +159,7 @@ class CollectOffersTests(unittest.TestCase):
 
         self.assertEqual(len(offers), 1)
         self.assertEqual(offers[0]["store"], "Loja Exemplo")
+        self.assertEqual(offers[0]["published_at"], "2026-10-28T11:00:00-0300")
         self.assertEqual(offers[0]["coupon_code"], "GPU10")
         self.assertEqual(offers[0]["image_url"], "https://i.promobit.com.br/268/gpu.jpg")
         self.assertEqual(
@@ -179,6 +197,57 @@ class CollectOffersTests(unittest.TestCase):
         self.assertEqual(urlopen.call_count, 3)
 
     @patch("src.sources.urlopen")
+    def test_combines_results_from_multiple_searches(self, urlopen):
+        offer_template = {
+            "offer_price": 2500,
+            "offer_status_name": "APPROVED",
+            "store_name": "Loja Exemplo",
+        }
+        search_results = {
+            "first": [
+                {
+                    **offer_template,
+                    "offer_title": "Placa RTX 5060 Ti 8GB",
+                    "offer_slug": "rtx-5060-ti-8gb",
+                }
+            ],
+            "second": [
+                {
+                    **offer_template,
+                    "offer_title": "Placa RTX 5060 Ti 16GB",
+                    "offer_slug": "rtx-5060-ti-16gb",
+                }
+            ],
+        }
+
+        def fake_urlopen(request, timeout):
+            if "promotions?" in request.full_url:
+                payload = {"data": []}
+            else:
+                query = request.full_url.rsplit("q=", 1)[1]
+                payload = {"active_offers": search_results[query]}
+            return io.BytesIO(json.dumps(payload).encode("utf-8"))
+
+        urlopen.side_effect = fake_urlopen
+
+        offers = collect_offers(
+            [
+                {
+                    "name": "RTX 5060 Ti",
+                    "queries": ["first", "second"],
+                    "keywords": ["RTX 5060 Ti"],
+                }
+            ]
+        )
+
+        self.assertEqual(len(offers), 2)
+        self.assertEqual(
+            {offer["title"] for offer in offers},
+            {"Placa RTX 5060 Ti 8GB", "Placa RTX 5060 Ti 16GB"},
+        )
+        self.assertEqual(urlopen.call_count, 3)
+
+    @patch("src.sources.urlopen")
     def test_includes_matching_bilometro_post(self, urlopen):
         responses = {
             "promotions?": {
@@ -191,6 +260,7 @@ class CollectOffersTests(unittest.TestCase):
                         "imageUrl": "https://images.example/gpu.jpg",
                         "storeName": "Mercado Livre",
                         "status": "SENT",
+                        "createdAt": "2026-10-28T14:00:00.000Z",
                     },
                     {
                         "gameName": "Placa de vídeo RTX 5060 Ti 8GB",
@@ -229,6 +299,7 @@ class CollectOffersTests(unittest.TestCase):
 
         self.assertEqual(len(offers), 1)
         self.assertEqual(offers[0]["source"], "bilometro")
+        self.assertEqual(offers[0]["published_at"], "2026-10-28T14:00:00.000Z")
         self.assertEqual(offers[0]["price"], 2499.9)
         self.assertEqual(offers[0]["store"], "Mercado Livre")
         self.assertEqual(offers[0]["coupon_code"], "GPU10")

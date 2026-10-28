@@ -1,10 +1,14 @@
 [
   {
     "name": "Placa de vídeo RTX 5060 Ti",
-    "query": "RTX 5060 Ti",
+    "queries": [
+      "RTX 5060 Ti",
+      "RTX 5060 Ti 8GB",
+      "RTX 5060 Ti 16GB",
+      "5060Ti"
+    ],
     "keywords": ["RTX 5060 Ti"],
-    "required_keywords": ["8GB"],
-    "exclude_keywords": ["16GB", "PC Gamer", "notebook", "laptop"]
+    "exclude_keywords": ["PC Gamer", "notebook", "laptop"]
   },
   {
     "name": "Placa de vídeo RTX 5060",

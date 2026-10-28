@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import sys
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from src.notifier import format_offer, send_telegram_offer
@@ -12,6 +13,49 @@ from src.storage import OfferStore
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_ITEMS_PATH = ROOT / "config" / "items.json"
 DEFAULT_DB_PATH = ROOT / ".state" / "garimpo.sqlite3"
+BRAZIL_TIMEZONE = timezone(timedelta(hours=-3))
+
+
+def _prioritize_offers(offers: list[dict], today: date | None = None) -> list[dict]:
+    if today is None:
+        today = datetime.now(BRAZIL_TIMEZONE).date()
+
+    def sort_key(offer: dict) -> tuple[int, int, float]:
+        item_name = offer.get("item", "")
+        item = item_name.casefold() if isinstance(item_name, str) else ""
+        if "5060 ti" in item:
+            item_priority = 0
+        elif "5060" in item:
+            item_priority = 1
+        else:
+            item_priority = 2
+
+        published_at = offer.get("published_at")
+        published = None
+        if isinstance(published_at, str) and published_at:
+            try:
+                iso_date = (
+                    published_at[:-1] + "+00:00"
+                    if published_at.endswith("Z")
+                    else published_at
+                )
+                published = datetime.fromisoformat(iso_date)
+                if published.tzinfo is None:
+                    published = published.replace(tzinfo=BRAZIL_TIMEZONE)
+                else:
+                    published = published.astimezone(BRAZIL_TIMEZONE)
+            except ValueError:
+                logging.warning(
+                    "Data de publicação inválida para a oferta %r: %s",
+                    offer.get("title"),
+                    published_at,
+                )
+
+        published_today = published is not None and published.date() == today
+        timestamp = published.timestamp() if published else 0
+        return (item_priority, 0 if published_today else 1, -timestamp)
+
+    return sorted(offers, key=sort_key)
 
 
 def main() -> int:
@@ -31,7 +75,9 @@ def main() -> int:
     store = OfferStore(db_path)
     try:
         known_urls = store.seen_urls()
-        new_offers = [offer for offer in offers if offer["url"] not in known_urls]
+        new_offers = _prioritize_offers(
+            [offer for offer in offers if offer["url"] not in known_urls]
+        )
         logging.info(
             "Coleta finalizada: %d resultados, %d novos.",
             len(offers),

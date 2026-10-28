@@ -189,6 +189,7 @@ def collect_offers(items: list[dict]) -> list[dict]:
                 "store": offer["store_name"],
                 "coupon_code": offer.get("offer_coupon"),
                 "image_url": _image_url(image_path) if isinstance(image_path, str) else None,
+                "published_at": offer.get("offer_published"),
                 "url": offer_url,
                 "source": "promobit",
             }
@@ -217,6 +218,7 @@ def collect_offers(items: list[dict]) -> list[dict]:
                     "store": promotion.get("storeName", ""),
                     "coupon_code": promotion.get("couponCode"),
                     "image_url": promotion.get("imageUrl"),
+                    "published_at": promotion.get("createdAt"),
                     "url": purchase_url,
                     "source": "bilometro",
                 }

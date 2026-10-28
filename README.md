@@ -1,6 +1,6 @@
 # Garimpo de hardware
 
-Monitor de ofertas recentes para placas de vídeo RTX 5060 e RTX 5060 Ti 8 GB, placas-mãe LGA 1851 DDR5, memórias DDR5, fontes de 650 W a 800 W, gabinetes e fans/ventoinhas de PC. A cada execução, busca promoções no Promobit e no Bilômetro e envia pelo Telegram apenas ofertas compatíveis, com preço, loja e link. Quando disponíveis, também inclui imagem e cupom.
+Monitor de ofertas recentes para placas de vídeo RTX 5060 e RTX 5060 Ti de 8 GB ou 16 GB, placas-mãe LGA 1851 DDR5, memórias DDR5, fontes de 650 W a 800 W, gabinetes e fans/ventoinhas de PC. A cada execução, busca promoções no Promobit e no Bilômetro e envia pelo Telegram apenas ofertas compatíveis, com preço, loja e link. As RTX 5060 Ti têm buscas adicionais e são priorizadas nos alertas, começando pelas ofertas publicadas no dia da execução. Quando disponíveis, também inclui imagem e cupom.
 
 > Disponibilidade, frete, cupons e preços podem mudar. Ofertas do Promobit abrem a publicação para conferir os detalhes; as do Bilômetro usam o link de compra compartilhado por essa fonte.
 >
@@ -38,7 +38,7 @@ Edite [`config/items.json`](./config/items.json) para personalizar itens, buscas
 
 ## Fonte de ofertas
 
-A coleta usa endpoints públicos consumidos pelos sites do Promobit e do Bilômetro. Eles não têm contrato público de estabilidade e podem mudar ou limitar consultas; se isso acontecer, a execução falhará visivelmente no log do GitHub Actions. Cada fonte limita os resultados disponibilizados ao monitor. O Pelando retornou HTTP 403 ao GitHub Actions, e o Zoom/Buscapé não foi integrado por não termos identificado uma API pública documentada apropriada para este fluxo.
+A coleta usa endpoints públicos consumidos pelos sites do Promobit e do Bilômetro. Eles não têm contrato público de estabilidade e podem mudar ou limitar consultas; se isso acontecer, a execução falhará visivelmente no log do GitHub Actions. São feitas buscas adicionais para a RTX 5060 Ti, mas as fontes podem limitar ou não retornar todos os anúncios; por isso, nenhuma automação consegue garantir que toda promoção será capturada. O Pelando retornou HTTP 403 ao GitHub Actions, e o Zoom/Buscapé não foi integrado por não termos identificado uma API pública documentada apropriada para este fluxo.
 
 ## GitHub Actions
 
