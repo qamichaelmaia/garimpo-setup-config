@@ -1,0 +1,43 @@
+name: Garimpo diário
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: garimpo
+  cancel-in-progress: false
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Baixar o projeto
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Restaurar histórico de ofertas
+        uses: actions/cache@v4
+        with:
+          path: .state/garimpo.sqlite3
+          key: garimpo-state-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            garimpo-state-
+
+      - name: Instalar dependências
+        run: python -m pip install -r requirements.txt
+
+      - name: Buscar ofertas e enviar alertas
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python -m src.main
