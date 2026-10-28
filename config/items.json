@@ -1,25 +1,29 @@
 [
   {
     "name": "Placa de vídeo RTX 5060 Ti",
-    "query": "RTX 5060",
-    "keywords": ["RTX 5060 Ti"]
+    "query": "RTX 5060 Ti",
+    "keywords": ["RTX 5060 Ti"],
+    "required_keywords": ["8GB"],
+    "exclude_keywords": ["16GB", "PC Gamer", "notebook", "laptop"]
   },
   {
     "name": "Placa de vídeo RTX 5060",
     "query": "RTX 5060",
     "keywords": ["RTX 5060"],
-    "exclude_keywords": ["RTX 5060 Ti", "notebook", "laptop"]
+    "exclude_keywords": ["RTX 5060 Ti", "PC Gamer", "notebook", "laptop"]
   },
   {
     "name": "Placa-mãe LGA 1851",
     "query": "LGA 1851",
-    "keywords": ["LGA 1851"]
+    "keywords": ["placa mãe"],
+    "required_keywords": ["LGA 1851"],
+    "exclude_keywords": ["processador", "cooler"]
   },
   {
     "name": "Memória DDR5",
-    "query": "DDR5",
-    "keywords": ["memória", "RAM"],
-    "required_keywords": ["DDR5"],
-    "exclude_keywords": ["notebook", "laptop"]
+    "query": "RAM DDR5",
+    "keywords": ["DDR5"],
+    "required_keywords": ["memória"],
+    "exclude_keywords": ["notebook", "laptop", "placa mãe", "motherboard"]
   }
 ]

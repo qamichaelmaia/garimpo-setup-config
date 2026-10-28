@@ -1,8 +1,8 @@
 # Garimpo de hardware
 
-Monitor de ofertas recentes para placas de vídeo RTX 5060 e RTX 5060 Ti, placas-mãe LGA 1851 e memórias DDR5. A cada execução, busca promoções publicadas no Pelando e envia pelo Telegram apenas ofertas ativas de produtos compatíveis, com preço e link direto para a loja. Quando disponíveis, também inclui a imagem e o cupom.
+Monitor de ofertas recentes para placas de vídeo RTX 5060 e RTX 5060 Ti 8 GB, placas-mãe LGA 1851 e memórias DDR5. A cada execução, busca promoções ativas no Promobit e envia pelo Telegram apenas ofertas de produtos compatíveis, com preço, loja e link da publicação. Quando disponíveis, também inclui imagem e cupom.
 
-> O Pelando é uma comunidade de ofertas: disponibilidade, frete, cupons e preços podem mudar. Confira as condições diretamente na loja antes de comprar.
+> O Promobit é uma comunidade de ofertas: disponibilidade, frete, cupons e preços podem mudar. O link abre a publicação no Promobit, onde você pode conferir os detalhes e seguir para a loja.
 
 ## Executar localmente
 
@@ -32,11 +32,11 @@ O modo de simulação imprime as ofertas sem exigir dados do Telegram nem gravar
 
    O token é solicitado sem aparecer na tela e removido do ambiente ao final. Não publique nem compartilhe o token. Se o resultado vier vazio, envie outra mensagem ao bot e consulte novamente.
 
-Edite [`config/items.json`](./config/items.json) para personalizar itens, buscas e palavras que devem ser excluídas. O programa ignora discussões, publicações expiradas, resultados sem preço e itens sem link de loja.
+Edite [`config/items.json`](./config/items.json) para personalizar itens, buscas e palavras que devem ser excluídas. O programa usa a lista de ofertas ativas do Promobit e ignora resultados sem preço, loja ou publicação.
 
 ## Fonte de ofertas
 
-A coleta usa os endpoints públicos consumidos pelo site do Pelando, pois o site não oferece um feed RSS oficial de ofertas. Esses endpoints não têm contrato público de estabilidade e podem mudar, limitar ou bloquear consultas; se isso acontecer, a execução falhará visivelmente no log do GitHub Actions. A busca filtra apenas promoções ativas e ainda confere os detalhes antes de alertar.
+A coleta usa o endpoint de busca público consumido pelo site do Promobit. Esse endpoint não tem contrato público de estabilidade e pode mudar ou limitar consultas; se isso acontecer, a execução falhará visivelmente no log do GitHub Actions. A resposta limita os resultados disponíveis, então o monitor só pode alertar promoções que o Promobit retornar para cada busca.
 
 ## GitHub Actions
 
@@ -50,6 +50,6 @@ O histórico de links já notificados é guardado no cache do Actions para reduz
 
 ### Custo e confiabilidade
 
-Para repositórios públicos, os runners padrão do GitHub Actions normalmente não consomem minutos pagos. Em repositórios privados, o uso depende da franquia e do plano; a cada cinco minutos podem ocorrer até 8.640 execuções por mês, portanto não há garantia de custo zero em uma conta privada. O workflow consulta o Pelando em cada execução. O Telegram é um serviço externo e suas condições podem mudar.
+Para repositórios públicos, os runners padrão do GitHub Actions normalmente não consomem minutos pagos. Em repositórios privados, o uso depende da franquia e do plano; a cada cinco minutos podem ocorrer até 8.640 execuções por mês, portanto não há garantia de custo zero em uma conta privada. O workflow consulta o Promobit em cada execução. O Telegram é um serviço externo e suas condições podem mudar.
 
 O GitHub pode atrasar ou descartar execuções agendadas em períodos de alta demanda. Portanto, o intervalo de cinco minutos é uma frequência solicitada, não uma garantia de execução pontual.

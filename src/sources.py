@@ -1,23 +1,24 @@
 import json
+import re
 import unicodedata
 from urllib.error import HTTPError
 from urllib.parse import urlencode, urlparse
 from urllib.request import Request, urlopen
-from uuid import uuid4
 
 
-API_BASE = "https://api-web.pelando.com.br"
-SITE_BASE = "https://www.pelando.com.br"
-SEARCH_LIMIT = 30
+API_BASE = "https://api.promobit.com.br"
+SITE_BASE = "https://www.promobit.com.br"
+IMAGE_BASE = "https://i.promobit.com.br/268"
 
 
-def _api_get(path: str, anonymous_id: str) -> dict:
+def _search_offers(query: str) -> list[dict]:
+    url = f"{API_BASE}/search?{urlencode({'q': query})}"
     request = Request(
-        f"{API_BASE}{path}",
+        url,
         headers={
             "Accept": "application/json",
+            "Referer": f"{SITE_BASE}/",
             "User-Agent": "garimpo-setup/1.0",
-            "x-sosho-unlogged-id": anonymous_id,
         },
     )
     try:
@@ -25,40 +26,28 @@ def _api_get(path: str, anonymous_id: str) -> dict:
             payload = json.load(response)
     except HTTPError as error:
         raise RuntimeError(
-            f"Pelando retornou HTTP {error.code} ao consultar ofertas."
+            f"Promobit retornou HTTP {error.code} ao consultar ofertas."
         ) from None
 
-    if not isinstance(payload, dict) or not isinstance(payload.get("data"), dict):
-        message = payload.get("errorMessage", "resposta inesperada da API") if isinstance(payload, dict) else "resposta inválida da API"
-        raise ValueError(f"Não foi possível ler ofertas do Pelando: {message}")
-    return payload["data"]
-
-
-def _search_deals(query: str, anonymous_id: str) -> list[dict]:
-    params = urlencode({"term": query, "limit": SEARCH_LIMIT})
-    data = _api_get(f"/feed/search?{params}", anonymous_id)
-    deals = data.get("deals")
-    if not isinstance(deals, list):
-        raise ValueError(f"Resposta de busca inválida para {query!r}.")
-    return deals
-
-
-def _deal_details(slug: str, anonymous_id: str) -> dict:
-    data = _api_get(f"/deals/{slug}", anonymous_id)
-    if not isinstance(data.get("id"), str):
-        raise ValueError(f"Resposta inválida para a oferta {slug!r}.")
-    return data
+    offers = payload.get("active_offers") if isinstance(payload, dict) else None
+    if not isinstance(offers, list):
+        raise ValueError(f"Resposta de busca inválida do Promobit para {query!r}.")
+    return offers
 
 
 def _normalize(text: str) -> str:
     normalized = unicodedata.normalize("NFKD", text.casefold())
-    return "".join(char for char in normalized if not unicodedata.combining(char))
+    plain = "".join(
+        char for char in normalized if not unicodedata.combining(char)
+    )
+    return " ".join(re.sub(r"[^a-z0-9]+", " ", plain).split())
 
 
 def _matches_item(title: str, item: dict) -> bool:
     normalized_title = _normalize(title)
-    keywords = item["keywords"]
-    if not any(_normalize(keyword) in normalized_title for keyword in keywords):
+    if not any(
+        _normalize(keyword) in normalized_title for keyword in item["keywords"]
+    ):
         return False
     if not all(
         _normalize(keyword) in normalized_title
@@ -71,27 +60,33 @@ def _matches_item(title: str, item: dict) -> bool:
     )
 
 
-def _valid_offer(deal: dict) -> bool:
-    price = deal.get("price")
-    source_url = deal.get("sourceUrl")
+def _is_active_offer(offer: dict) -> bool:
+    price = offer.get("offer_price")
     return (
-        deal.get("kind") == "promotion"
-        and deal.get("status") == "active"
+        isinstance(offer.get("offer_title"), str)
+        and isinstance(offer.get("offer_slug"), str)
         and isinstance(price, (int, float))
         and not isinstance(price, bool)
         and price > 0
-        and isinstance(source_url, str)
-        and urlparse(source_url).scheme in {"http", "https"}
+        and isinstance(offer.get("store_name"), str)
+        and bool(offer["store_name"])
     )
 
 
+def _image_url(path: str | None) -> str | None:
+    if not path:
+        return None
+    if path.startswith(("http://", "https://")):
+        return path
+    return f"{IMAGE_BASE}/{path.lstrip('/')}"
+
+
 def collect_offers(items: list[dict]) -> list[dict]:
-    anonymous_id = str(uuid4())
     search_cache: dict[str, list[dict]] = {}
     candidates: dict[str, tuple[dict, dict]] = {}
 
     for item in items:
-        if not isinstance(item.get("name"), str) or not item.get("name"):
+        if not isinstance(item.get("name"), str) or not item["name"]:
             raise ValueError("Cada item monitorado precisa ter um nome.")
         if not isinstance(item.get("query"), str) or not item["query"]:
             raise ValueError(f"O item {item['name']!r} precisa ter uma busca.")
@@ -100,38 +95,34 @@ def collect_offers(items: list[dict]) -> list[dict]:
 
         query = item["query"]
         if query not in search_cache:
-            search_cache[query] = _search_deals(query, anonymous_id)
+            search_cache[query] = _search_offers(query)
 
-        for deal in search_cache[query]:
-            slug = deal.get("slug")
-            title = deal.get("title")
+        for offer in search_cache[query]:
+            title = offer.get("offer_title")
+            slug = offer.get("offer_slug")
             if (
-                isinstance(slug, str)
-                and isinstance(title, str)
-                and _valid_offer(deal)
+                isinstance(title, str)
+                and isinstance(slug, str)
+                and _is_active_offer(offer)
                 and _matches_item(title, item)
             ):
-                candidates.setdefault(slug, (item, deal))
+                candidates.setdefault(slug, (item, offer))
 
-    offers = []
-    for slug, (item, candidate) in candidates.items():
-        deal = _deal_details(slug, anonymous_id)
-        if not _valid_offer(deal) or not _matches_item(deal.get("title", ""), item):
-            continue
-
-        store = deal.get("store")
-        offers.append(
+    results = []
+    for slug, (item, offer) in candidates.items():
+        offer_url = f"{SITE_BASE}/oferta/{slug}/"
+        image_path = offer.get("offer_photo")
+        results.append(
             {
                 "item": item["name"],
-                "title": deal["title"],
-                "price": deal["price"],
-                "store": store.get("name", "") if isinstance(store, dict) else "",
-                "coupon_code": deal.get("couponCode"),
-                "image_url": deal.get("imageUrl"),
-                "buy_url": deal.get("sourceUrl") or candidate["sourceUrl"],
-                "url": f"{SITE_BASE}/d/{slug}",
-                "source": "pelando",
+                "title": offer["offer_title"],
+                "price": offer["offer_price"],
+                "store": offer["store_name"],
+                "coupon_code": offer.get("offer_coupon"),
+                "image_url": _image_url(image_path) if isinstance(image_path, str) else None,
+                "url": offer_url,
+                "source": "promobit",
             }
         )
 
-    return offers
+    return results

@@ -14,8 +14,7 @@ class TelegramOfferTests(unittest.TestCase):
             "price": 2499.9,
             "coupon_code": "GPU10",
             "image_url": "https://store.example/gpu.jpg",
-            "buy_url": "https://store.example/gpu",
-            "url": "https://www.pelando.com.br/d/rtx-5060",
+            "url": "https://www.promobit.com.br/oferta/rtx-5060/",
         }
 
     def test_formats_offer_details_in_brazilian_currency(self):
@@ -23,8 +22,8 @@ class TelegramOfferTests(unittest.TestCase):
 
         self.assertIn("R$ 2.499,90", message)
         self.assertIn("Cupom: GPU10", message)
-        self.assertIn("https://store.example/gpu", message)
-        self.assertIn("https://www.pelando.com.br/d/rtx-5060", message)
+        self.assertIn("Loja: Loja Exemplo", message)
+        self.assertIn(self.offer["url"], message)
 
     @patch("src.notifier.urlopen")
     def test_sends_offer_with_product_image(self, urlopen):

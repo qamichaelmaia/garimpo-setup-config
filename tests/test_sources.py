@@ -7,97 +7,95 @@ from src.sources import _matches_item, collect_offers
 
 
 class CollectOffersTests(unittest.TestCase):
-    def test_memory_item_does_not_match_motherboards(self):
+    def test_product_filters_exclude_other_product_types(self):
         memory_item = {
-            "keywords": ["memória", "RAM"],
-            "required_keywords": ["DDR5"],
-            "exclude_keywords": ["notebook", "laptop"],
+            "keywords": ["DDR5"],
+            "required_keywords": ["memória"],
+            "exclude_keywords": ["notebook", "placa mãe"],
         }
 
         self.assertTrue(
             _matches_item("Memória Corsair DDR5 16GB", memory_item)
         )
         self.assertFalse(
-            _matches_item("Placa Mãe MSI B760M DDR5", memory_item)
+            _matches_item("Placa-Mãe Gigabyte DDR5", memory_item)
         )
 
     @patch("src.sources.urlopen")
-    def test_returns_only_active_matching_store_promotions(self, urlopen):
-        search_results = {
-            "data": {
-                "deals": [
-                    {
-                        "slug": "active-gpu",
-                        "title": "Placa de Vídeo RTX 5060 8GB",
-                        "kind": "promotion",
-                        "status": "active",
-                        "price": 2499,
-                        "sourceUrl": "https://store.example/gpu",
-                    },
-                    {
-                        "slug": "expired-gpu",
-                        "title": "RTX 5060 Ti expirada",
-                        "kind": "promotion",
-                        "status": "expired",
-                        "price": 2000,
-                        "sourceUrl": "https://store.example/expired",
-                    },
-                    {
-                        "slug": "discussion",
-                        "title": "RTX 5060 vale a pena?",
-                        "kind": "discussion",
-                        "status": "active",
-                        "price": 2000,
-                        "sourceUrl": "https://store.example/discussion",
-                    },
-                    {
-                        "slug": "notebook",
-                        "title": "Notebook gamer RTX 5060",
-                        "kind": "promotion",
-                        "status": "active",
-                        "price": 7000,
-                        "sourceUrl": "https://store.example/notebook",
-                    },
-                ]
-            }
-        }
-        details = {
-            "data": {
-                "id": "offer-id",
-                "slug": "active-gpu",
-                "title": "Placa de Vídeo RTX 5060 8GB",
-                "kind": "promotion",
-                "status": "active",
-                "price": 2499,
-                "sourceUrl": "https://store.example/gpu",
-                "store": {"name": "Loja Exemplo"},
-                "couponCode": "GPU10",
-                "imageUrl": "https://store.example/gpu.jpg",
-            }
-        }
-
-        def fake_urlopen(request, timeout):
-            body = details if "/deals/" in request.full_url else search_results
-            return io.BytesIO(json.dumps(body).encode("utf-8"))
-
-        urlopen.side_effect = fake_urlopen
-        offers = collect_offers(
-            [
+    def test_returns_matching_store_offers_with_coupon_and_image(self, urlopen):
+        payload = {
+            "active_offers": [
                 {
-                    "name": "RTX 5060",
-                    "query": "RTX 5060",
-                    "keywords": ["RTX 5060"],
-                    "exclude_keywords": ["RTX 5060 Ti", "notebook"],
-                }
+                    "offer_id": 1,
+                    "offer_title": "Placa de Vídeo RTX 5060 8GB",
+                    "offer_slug": "rtx-5060-8gb-1",
+                    "offer_price": 2499,
+                    "offer_coupon": "GPU10",
+                    "offer_photo": "/gpu.jpg",
+                    "offer_status_name": "APPROVED",
+                    "store_name": "Loja Exemplo",
+                },
+                {
+                    "offer_id": 2,
+                    "offer_title": "Notebook gamer RTX 5060",
+                    "offer_slug": "notebook-rtx-5060-2",
+                    "offer_price": 7000,
+                    "offer_status_name": "APPROVED",
+                    "store_name": "Loja Exemplo",
+                },
+                {
+                    "offer_id": 3,
+                    "offer_title": "PC Gamer RTX 5060 Ti",
+                    "offer_slug": "pc-gamer-rtx-5060-ti-3",
+                    "offer_price": 8000,
+                    "offer_status_name": "APPROVED",
+                    "store_name": "Loja Exemplo",
+                },
+                {
+                    "offer_id": 4,
+                    "offer_title": "Placa RTX 5060 8GB sem preço",
+                    "offer_slug": "no-price-4",
+                    "offer_price": None,
+                    "offer_status_name": "APPROVED",
+                    "store_name": "Loja Exemplo",
+                },
             ]
-        )
+        }
+        response = io.BytesIO(json.dumps(payload).encode("utf-8"))
+        urlopen.return_value.__enter__.return_value = response
+        item = {
+            "name": "RTX 5060",
+            "query": "RTX 5060",
+            "keywords": ["RTX 5060"],
+            "exclude_keywords": ["RTX 5060 Ti", "notebook", "PC Gamer"],
+        }
+
+        offers = collect_offers([item])
 
         self.assertEqual(len(offers), 1)
         self.assertEqual(offers[0]["store"], "Loja Exemplo")
         self.assertEqual(offers[0]["coupon_code"], "GPU10")
-        self.assertEqual(offers[0]["buy_url"], "https://store.example/gpu")
-        self.assertEqual(offers[0]["url"], "https://www.pelando.com.br/d/active-gpu")
-        self.assertEqual(urlopen.call_count, 2)
+        self.assertEqual(offers[0]["image_url"], "https://i.promobit.com.br/268/gpu.jpg")
+        self.assertEqual(
+            offers[0]["url"],
+            "https://www.promobit.com.br/oferta/rtx-5060-8gb-1/",
+        )
+        self.assertEqual(urlopen.call_count, 1)
+
+    @patch("src.sources.urlopen")
+    def test_caches_search_for_shared_queries(self, urlopen):
+        payload = {"active_offers": []}
+        response = io.BytesIO(json.dumps(payload).encode("utf-8"))
+        urlopen.return_value.__enter__.return_value = response
+
+        collect_offers(
+            [
+                {"name": "A", "query": "shared", "keywords": ["A"]},
+                {"name": "B", "query": "shared", "keywords": ["B"]},
+            ]
+        )
+
+        self.assertEqual(urlopen.call_count, 1)
 
 
 if __name__ == "__main__":
