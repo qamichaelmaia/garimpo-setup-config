@@ -3,36 +3,36 @@ from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 
-def _format_offer(offer: dict) -> str:
-    price = f' — R$ {offer["price"]:.2f}' if offer["price"] is not None else ""
-    return f'- {offer["item"]}: {offer["title"]}{price}\n{offer["url"]}'
+def _format_price(price: float) -> str:
+    return f"{price:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
-def format_messages(offers: list[dict], max_length: int = 3000) -> list[str]:
-    heading = "Garimpo encontrou novas ofertas:\n\n"
-    messages = []
-    entries = []
-
-    for offer in offers:
-        entry = _format_offer(offer)
-        candidate = heading + "\n\n".join(entries + [entry])
-        if entries and len(candidate) > max_length:
-            messages.append(heading + "\n\n".join(entries))
-            entries = [entry]
-        else:
-            entries.append(entry)
-
-    if entries:
-        messages.append(heading + "\n\n".join(entries))
-    return messages
+def format_offer(offer: dict) -> str:
+    lines = [
+        f'🛒 {offer["title"]}',
+        f'🏪 Loja: {offer["store"]}' if offer.get("store") else None,
+        f'✅ Por: R$ {_format_price(offer["price"])}',
+        f'🎟️ Cupom: {offer["coupon_code"]}' if offer.get("coupon_code") else None,
+        f'👉 Compre aqui: {offer["buy_url"]}',
+        f'🔎 Oferta: {offer["url"]}',
+        "⚠️ Preço e estoque podem mudar; confira as condições na loja.",
+    ]
+    return "\n".join(line for line in lines if line)
 
 
-def send_telegram(message: str, bot_token: str, chat_id: str) -> None:
-    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-    payload = json.dumps({"chat_id": chat_id, "text": message}).encode("utf-8")
+def send_telegram_offer(offer: dict, bot_token: str, chat_id: str) -> None:
+    caption = format_offer(offer)
+    send_photo = bool(offer.get("image_url")) and len(caption) <= 1024
+    method = "sendPhoto" if send_photo else "sendMessage"
+    payload = {"chat_id": chat_id}
+    if send_photo:
+        payload.update({"photo": offer["image_url"], "caption": caption})
+    else:
+        payload["text"] = caption
+
     request = Request(
-        url,
-        data=payload,
+        f"https://api.telegram.org/bot{bot_token}/{method}",
+        data=json.dumps(payload).encode("utf-8"),
         headers={
             "Content-Type": "application/json",
             "User-Agent": "garimpo-setup/1.0",
@@ -47,4 +47,4 @@ def send_telegram(message: str, bot_token: str, chat_id: str) -> None:
 
     if not result.get("ok"):
         description = result.get("description", "erro não especificado")
-        raise RuntimeError(f"Telegram não enviou a mensagem: {description}")
+        raise RuntimeError(f"Telegram não enviou a oferta: {description}")

@@ -3,70 +3,64 @@ import json
 import unittest
 from unittest.mock import patch
 
-from src.notifier import format_messages, send_telegram
+from src.notifier import format_offer, send_telegram_offer
 
 
-class FormatMessagesTests(unittest.TestCase):
-    def test_formats_price_and_link(self):
-        messages = format_messages(
-            [
-                {
-                    "item": "GPU",
-                    "title": "Oferta",
-                    "price": 2999.9,
-                    "url": "https://example.com/oferta",
-                }
-            ]
-        )
+class TelegramOfferTests(unittest.TestCase):
+    def setUp(self):
+        self.offer = {
+            "title": "Placa de Vídeo RTX 5060",
+            "store": "Loja Exemplo",
+            "price": 2499.9,
+            "coupon_code": "GPU10",
+            "image_url": "https://store.example/gpu.jpg",
+            "buy_url": "https://store.example/gpu",
+            "url": "https://www.pelando.com.br/d/rtx-5060",
+        }
 
-        self.assertEqual(len(messages), 1)
-        self.assertIn("R$ 2999.90", messages[0])
-        self.assertIn("https://example.com/oferta", messages[0])
+    def test_formats_offer_details_in_brazilian_currency(self):
+        message = format_offer(self.offer)
 
-    def test_splits_messages_without_dropping_heading(self):
-        offers = [
-            {
-                "item": "GPU",
-                "title": f"Oferta {index}",
-                "price": None,
-                "url": f"https://example.com/{index}",
-            }
-            for index in range(3)
-        ]
+        self.assertIn("R$ 2.499,90", message)
+        self.assertIn("Cupom: GPU10", message)
+        self.assertIn("https://store.example/gpu", message)
+        self.assertIn("https://www.pelando.com.br/d/rtx-5060", message)
 
-        messages = format_messages(offers, max_length=100)
-
-        self.assertGreater(len(messages), 1)
-        self.assertTrue(all(message.startswith("Garimpo encontrou") for message in messages))
-        self.assertEqual(sum(message.count("https://example.com/") for message in messages), 3)
-
-
-class SendTelegramTests(unittest.TestCase):
     @patch("src.notifier.urlopen")
-    def test_sends_message_to_telegram(self, urlopen):
+    def test_sends_offer_with_product_image(self, urlopen):
         response = io.BytesIO(b'{"ok": true}')
-        response.status = 200
         urlopen.return_value.__enter__.return_value = response
 
-        send_telegram("Oferta de teste", "bot-token", "123")
+        send_telegram_offer(self.offer, "bot-token", "123")
 
         request = urlopen.call_args.args[0]
-        self.assertIn("/botbot-token/sendMessage", request.full_url)
-        self.assertEqual(
-            json.loads(request.data),
-            {"chat_id": "123", "text": "Oferta de teste"},
-        )
+        self.assertTrue(request.full_url.endswith("/sendPhoto"))
+        payload = json.loads(request.data)
+        self.assertEqual(payload["chat_id"], "123")
+        self.assertEqual(payload["photo"], self.offer["image_url"])
+        self.assertIn("R$ 2.499,90", payload["caption"])
 
     @patch("src.notifier.urlopen")
-    def test_raises_when_telegram_rejects_message(self, urlopen):
+    def test_sends_text_when_offer_has_no_image(self, urlopen):
+        response = io.BytesIO(b'{"ok": true}')
+        urlopen.return_value.__enter__.return_value = response
+        offer = {**self.offer, "image_url": None}
+
+        send_telegram_offer(offer, "bot-token", "123")
+
+        request = urlopen.call_args.args[0]
+        self.assertTrue(request.full_url.endswith("/sendMessage"))
+        self.assertIn("text", json.loads(request.data))
+
+    @patch("src.notifier.urlopen")
+    def test_raises_when_telegram_rejects_offer(self, urlopen):
         response = io.BytesIO(
             b'{"ok": false, "description": "chat not found"}'
         )
-        response.status = 200
         urlopen.return_value.__enter__.return_value = response
 
         with self.assertRaisesRegex(RuntimeError, "chat not found"):
-            send_telegram("Oferta de teste", "bot-token", "123")
+            send_telegram_offer(self.offer, "bot-token", "123")
 
 
 if __name__ == "__main__":

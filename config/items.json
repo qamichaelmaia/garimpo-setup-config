@@ -1,23 +1,25 @@
 [
   {
     "name": "Placa de vídeo RTX 5060 Ti",
-    "keywords": [
-      "RTX 5060 Ti preço",
-      "GeForce RTX 5060 Ti promoção"
-    ]
+    "query": "RTX 5060",
+    "keywords": ["RTX 5060 Ti"]
+  },
+  {
+    "name": "Placa de vídeo RTX 5060",
+    "query": "RTX 5060",
+    "keywords": ["RTX 5060"],
+    "exclude_keywords": ["RTX 5060 Ti", "notebook", "laptop"]
   },
   {
     "name": "Placa-mãe LGA 1851",
-    "keywords": [
-      "placa mãe LGA 1851 preço",
-      "motherboard LGA 1851 promoção"
-    ]
+    "query": "LGA 1851",
+    "keywords": ["LGA 1851"]
   },
   {
     "name": "Memória DDR5",
-    "keywords": [
-      "memória DDR5 promoção",
-      "memória RAM DDR5 preço"
-    ]
+    "query": "DDR5",
+    "keywords": ["memória", "RAM"],
+    "required_keywords": ["DDR5"],
+    "exclude_keywords": ["notebook", "laptop"]
   }
 ]
