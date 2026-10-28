@@ -13,10 +13,10 @@
     "exclude_keywords": ["RTX 5060 Ti", "PC Gamer", "notebook", "laptop"]
   },
   {
-    "name": "Placa-mãe LGA 1851",
+    "name": "Placa-mãe LGA 1851 DDR5",
     "query": "LGA 1851",
     "keywords": ["placa mãe"],
-    "required_keywords": ["LGA 1851"],
+    "required_keywords": ["LGA 1851", "DDR5"],
     "exclude_keywords": ["processador", "cooler"]
   },
   {
@@ -25,5 +25,36 @@
     "keywords": ["DDR5"],
     "required_keywords": ["memória"],
     "exclude_keywords": ["notebook", "laptop", "placa mãe", "motherboard"]
+  },
+  {
+    "name": "Fonte 650W a 800W",
+    "queries": [
+      "fonte 650W",
+      "fonte 700W",
+      "fonte 750W",
+      "fonte 800W"
+    ],
+    "keywords": ["fonte"],
+    "required_any_keywords": ["650W", "700W", "750W", "800W"],
+    "exclude_keywords": ["notebook", "carregador"]
+  },
+  {
+    "name": "Gabinete para PC",
+    "queries": ["gabinete gamer", "gabinete pc"],
+    "keywords": ["gabinete", "case"],
+    "exclude_keywords": ["rack", "celular"]
+  },
+  {
+    "name": "Fans e ventoinhas para PC",
+    "queries": ["fan gabinete", "ventoinha pc"],
+    "keywords": ["fan", "fans", "ventoinha"],
+    "exclude_prefix_keywords": ["gabinete"],
+    "exclude_keywords": [
+      "notebook",
+      "cooler processador",
+      "water cooler",
+      "carro",
+      "celular"
+    ]
   }
 ]

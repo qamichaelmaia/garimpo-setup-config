@@ -88,20 +88,36 @@ def _normalize(text: str) -> str:
     return " ".join(re.sub(r"[^a-z0-9]+", " ", plain).split())
 
 
-def _matches_item(title: str, item: dict) -> bool:
+def _contains_keyword(title: str, keyword: str) -> bool:
     normalized_title = _normalize(title)
+    normalized_keyword = _normalize(keyword)
+    return f" {normalized_keyword} " in f" {normalized_title} "
+
+
+def _matches_item(title: str, item: dict) -> bool:
     if not any(
-        _normalize(keyword) in normalized_title for keyword in item["keywords"]
+        _contains_keyword(title, keyword) for keyword in item["keywords"]
     ):
         return False
+    if not any(
+        _contains_keyword(title, keyword)
+        for keyword in item.get("required_any_keywords", [])
+    ) and item.get("required_any_keywords"):
+        return False
     if not all(
-        _normalize(keyword) in normalized_title
+        _contains_keyword(title, keyword)
         for keyword in item.get("required_keywords", [])
     ):
         return False
-    return not any(
-        _normalize(keyword) in normalized_title
+    normalized_title = _normalize(title)
+    if any(
+        _contains_keyword(title, keyword)
         for keyword in item.get("exclude_keywords", [])
+    ):
+        return False
+    return not any(
+        normalized_title.startswith(f"{_normalize(keyword)} ")
+        for keyword in item.get("exclude_prefix_keywords", [])
     )
 
 
@@ -134,25 +150,32 @@ def collect_offers(items: list[dict]) -> list[dict]:
     for item in items:
         if not isinstance(item.get("name"), str) or not item["name"]:
             raise ValueError("Cada item monitorado precisa ter um nome.")
-        if not isinstance(item.get("query"), str) or not item["query"]:
-            raise ValueError(f"O item {item['name']!r} precisa ter uma busca.")
+        queries = item.get("queries", item.get("query"))
+        if isinstance(queries, str):
+            queries = [queries]
+        if (
+            not isinstance(queries, list)
+            or not queries
+            or not all(isinstance(query, str) and query for query in queries)
+        ):
+            raise ValueError(f"O item {item['name']!r} precisa ter buscas válidas.")
         if not isinstance(item.get("keywords"), list) or not item["keywords"]:
             raise ValueError(f"O item {item['name']!r} precisa ter palavras-chave.")
 
-        query = item["query"]
-        if query not in search_cache:
-            search_cache[query] = _search_offers(query)
+        for query in queries:
+            if query not in search_cache:
+                search_cache[query] = _search_offers(query)
 
-        for offer in search_cache[query]:
-            title = offer.get("offer_title")
-            slug = offer.get("offer_slug")
-            if (
-                isinstance(title, str)
-                and isinstance(slug, str)
-                and _is_active_offer(offer)
-                and _matches_item(title, item)
-            ):
-                candidates.setdefault(slug, (item, offer))
+            for offer in search_cache[query]:
+                title = offer.get("offer_title")
+                slug = offer.get("offer_slug")
+                if (
+                    isinstance(title, str)
+                    and isinstance(slug, str)
+                    and _is_active_offer(offer)
+                    and _matches_item(title, item)
+                ):
+                    candidates.setdefault(slug, (item, offer))
 
     results = []
     for slug, (item, offer) in candidates.items():

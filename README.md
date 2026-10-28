@@ -1,6 +1,6 @@
 # Garimpo de hardware
 
-Monitor de ofertas recentes para placas de vídeo RTX 5060 e RTX 5060 Ti 8 GB, placas-mãe LGA 1851 e memórias DDR5. A cada execução, busca promoções no Promobit e no Bilômetro e envia pelo Telegram apenas ofertas compatíveis, com preço, loja e link. Quando disponíveis, também inclui imagem e cupom.
+Monitor de ofertas recentes para placas de vídeo RTX 5060 e RTX 5060 Ti 8 GB, placas-mãe LGA 1851 DDR5, memórias DDR5, fontes de 650 W a 800 W, gabinetes e fans/ventoinhas de PC. A cada execução, busca promoções no Promobit e no Bilômetro e envia pelo Telegram apenas ofertas compatíveis, com preço, loja e link. Quando disponíveis, também inclui imagem e cupom.
 
 > Disponibilidade, frete, cupons e preços podem mudar. Ofertas do Promobit abrem a publicação para conferir os detalhes; as do Bilômetro usam o link de compra compartilhado por essa fonte.
 >
@@ -34,7 +34,7 @@ O modo de simulação imprime as ofertas sem exigir dados do Telegram nem gravar
 
    O token é solicitado sem aparecer na tela e removido do ambiente ao final. Não publique nem compartilhe o token. Se o resultado vier vazio, envie outra mensagem ao bot e consulte novamente.
 
-Edite [`config/items.json`](./config/items.json) para personalizar itens, buscas e palavras que devem ser excluídas. O monitor procura ofertas publicadas por ambas as fontes e ignora resultados sem preço ou link de compra/publicação.
+Edite [`config/items.json`](./config/items.json) para personalizar itens, buscas e palavras que devem ser excluídas. Um item pode usar uma busca (`query`) ou várias (`queries`). O monitor procura ofertas publicadas por ambas as fontes e ignora resultados sem preço ou link de compra/publicação.
 
 ## Fonte de ofertas
 

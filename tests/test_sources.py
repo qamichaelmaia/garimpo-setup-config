@@ -26,6 +26,59 @@ class CollectOffersTests(unittest.TestCase):
             _matches_item("Placa-Mãe Gigabyte DDR5", memory_item)
         )
 
+    def test_requires_both_lga1851_and_ddr5_for_motherboards(self):
+        motherboard_item = {
+            "keywords": ["placa mãe"],
+            "required_keywords": ["LGA 1851", "DDR5"],
+            "exclude_keywords": ["processador", "cooler"],
+        }
+
+        self.assertTrue(
+            _matches_item("Placa-Mãe Z890 LGA 1851 DDR5", motherboard_item)
+        )
+        self.assertFalse(
+            _matches_item("Placa-Mãe B760 LGA 1700 DDR5", motherboard_item)
+        )
+        self.assertFalse(
+            _matches_item("Placa-Mãe LGA 1851 DDR4", motherboard_item)
+        )
+
+    def test_power_supply_filter_matches_only_requested_wattages(self):
+        power_supply_item = {
+            "keywords": ["fonte"],
+            "required_any_keywords": ["650W", "700W", "750W", "800W"],
+        }
+
+        self.assertTrue(
+            _matches_item("Fonte Corsair 750W 80 Plus Gold", power_supply_item)
+        )
+        self.assertFalse(
+            _matches_item("Fonte Corsair 850W 80 Plus Gold", power_supply_item)
+        )
+
+    def test_ventoinha_filter_excludes_cpu_coolers(self):
+        fan_item = {
+            "keywords": ["fan", "fans", "ventoinha"],
+            "exclude_prefix_keywords": ["gabinete"],
+            "exclude_keywords": [
+                "cooler processador",
+                "water cooler",
+            ],
+        }
+
+        self.assertTrue(
+            _matches_item("Kit 3 Fans RGB para gabinete", fan_item)
+        )
+        self.assertFalse(
+            _matches_item("Water Cooler com 3 Fans RGB", fan_item)
+        )
+        self.assertFalse(
+            _matches_item("Gabinete Gamer com 4 Fans RGB", fan_item)
+        )
+        self.assertFalse(
+            _matches_item("Metaphor Refantazio - Playstation 5", fan_item)
+        )
+
     @patch("src.sources.urlopen")
     def test_returns_matching_store_offers_with_coupon_and_image(self, urlopen):
         promobit_payload = {
@@ -115,11 +168,15 @@ class CollectOffersTests(unittest.TestCase):
         collect_offers(
             [
                 {"name": "A", "query": "shared", "keywords": ["A"]},
-                {"name": "B", "query": "shared", "keywords": ["B"]},
+                {
+                    "name": "B",
+                    "queries": ["shared", "unique"],
+                    "keywords": ["B"],
+                },
             ]
         )
 
-        self.assertEqual(urlopen.call_count, 2)
+        self.assertEqual(urlopen.call_count, 3)
 
     @patch("src.sources.urlopen")
     def test_includes_matching_bilometro_post(self, urlopen):
