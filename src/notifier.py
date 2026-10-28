@@ -8,12 +8,19 @@ def _format_price(price: float) -> str:
 
 
 def format_offer(offer: dict) -> str:
+    source_names = {"promobit": "Promobit", "bilometro": "Bilômetro"}
+    source_name = source_names.get(offer.get("source"), offer.get("source"))
     lines = [
         f'🛒 {offer["title"]}',
         f'🏪 Loja: {offer["store"]}' if offer.get("store") else None,
         f'✅ Por: R$ {_format_price(offer["price"])}',
         f'🎟️ Cupom: {offer["coupon_code"]}' if offer.get("coupon_code") else None,
-        f'👉 Ver oferta e acessar a loja: {offer["url"]}',
+        (
+            f'👉 Comprar: {offer["url"]}'
+            if offer.get("source") == "bilometro"
+            else f'👉 Ver oferta: {offer["url"]}'
+        ),
+        f"📣 Fonte: {source_name}" if source_name else None,
         "⚠️ Preço e estoque podem mudar; confira as condições na loja.",
     ]
     return "\n".join(line for line in lines if line)

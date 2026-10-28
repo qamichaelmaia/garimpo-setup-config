@@ -6,18 +6,20 @@ from urllib.parse import urlencode, urlparse
 from urllib.request import Request, urlopen
 
 
-API_BASE = "https://api.promobit.com.br"
-SITE_BASE = "https://www.promobit.com.br"
-IMAGE_BASE = "https://i.promobit.com.br/268"
+PROMOBIT_API_BASE = "https://api.promobit.com.br"
+PROMOBIT_SITE_BASE = "https://www.promobit.com.br"
+PROMOBIT_IMAGE_BASE = "https://i.promobit.com.br/268"
+BILOMETRO_API_BASE = "https://bilometro-api-583495244408.us-east1.run.app"
+BILOMETRO_PAGE_LIMIT = 100
 
 
 def _search_offers(query: str) -> list[dict]:
-    url = f"{API_BASE}/search?{urlencode({'q': query})}"
+    url = f"{PROMOBIT_API_BASE}/search?{urlencode({'q': query})}"
     request = Request(
         url,
         headers={
             "Accept": "application/json",
-            "Referer": f"{SITE_BASE}/",
+            "Referer": f"{PROMOBIT_SITE_BASE}/",
             "User-Agent": "garimpo-setup/1.0",
         },
     )
@@ -33,6 +35,49 @@ def _search_offers(query: str) -> list[dict]:
     if not isinstance(offers, list):
         raise ValueError(f"Resposta de busca inválida do Promobit para {query!r}.")
     return offers
+
+
+def _search_bilometro_promotions() -> list[dict]:
+    params = urlencode(
+        {
+            "page": 1,
+            "limit": BILOMETRO_PAGE_LIMIT,
+            "includeEmptyGames": "false",
+            "from": "bilometro",
+        }
+    )
+    request = Request(
+        f"{BILOMETRO_API_BASE}/promotions?{params}",
+        headers={
+            "Accept": "application/json",
+            "User-Agent": "garimpo-setup/1.0",
+        },
+    )
+    try:
+        with urlopen(request, timeout=20) as response:
+            payload = json.load(response)
+    except HTTPError as error:
+        raise RuntimeError(
+            f"Bilômetro retornou HTTP {error.code} ao consultar promoções."
+        ) from None
+
+    promotions = payload.get("data") if isinstance(payload, dict) else None
+    if not isinstance(promotions, list):
+        raise ValueError("Resposta de promoções inválida do Bilômetro.")
+    return promotions
+
+
+def _parse_price(text: str | None) -> float | None:
+    if not text:
+        return None
+    match = re.search(r"R\$\s*([\d.]+(?:,\d{2})?)", text, re.IGNORECASE)
+    if not match:
+        return None
+    number = match.group(1).replace(".", "").replace(",", ".")
+    try:
+        return float(number)
+    except ValueError:
+        return None
 
 
 def _normalize(text: str) -> str:
@@ -78,12 +123,13 @@ def _image_url(path: str | None) -> str | None:
         return None
     if path.startswith(("http://", "https://")):
         return path
-    return f"{IMAGE_BASE}/{path.lstrip('/')}"
+    return f"{PROMOBIT_IMAGE_BASE}/{path.lstrip('/')}"
 
 
 def collect_offers(items: list[dict]) -> list[dict]:
     search_cache: dict[str, list[dict]] = {}
     candidates: dict[str, tuple[dict, dict]] = {}
+    promotions = _search_bilometro_promotions()
 
     for item in items:
         if not isinstance(item.get("name"), str) or not item["name"]:
@@ -110,7 +156,7 @@ def collect_offers(items: list[dict]) -> list[dict]:
 
     results = []
     for slug, (item, offer) in candidates.items():
-        offer_url = f"{SITE_BASE}/oferta/{slug}/"
+        offer_url = f"{PROMOBIT_SITE_BASE}/oferta/{slug}/"
         image_path = offer.get("offer_photo")
         results.append(
             {
@@ -124,5 +170,38 @@ def collect_offers(items: list[dict]) -> list[dict]:
                 "source": "promobit",
             }
         )
+
+    for item in items:
+        for promotion in promotions:
+            title = promotion.get("gameName")
+            purchase_url = promotion.get("purchaseLink")
+            price = _parse_price(promotion.get("priceDetails"))
+            if (
+                not isinstance(title, str)
+                or not isinstance(purchase_url, str)
+                or urlparse(purchase_url).scheme not in {"http", "https"}
+                or promotion.get("status") != "SENT"
+                or price is None
+                or not _matches_item(title, item)
+            ):
+                continue
+
+            results.append(
+                {
+                    "item": item["name"],
+                    "title": title,
+                    "price": price,
+                    "store": promotion.get("storeName", ""),
+                    "coupon_code": promotion.get("couponCode"),
+                    "image_url": promotion.get("imageUrl"),
+                    "url": purchase_url,
+                    "source": "bilometro",
+                }
+            )
+
+    unique_offers = {}
+    for offer in results:
+        unique_offers.setdefault(offer["url"], offer)
+    results = list(unique_offers.values())
 
     return results

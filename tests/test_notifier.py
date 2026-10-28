@@ -15,6 +15,7 @@ class TelegramOfferTests(unittest.TestCase):
             "coupon_code": "GPU10",
             "image_url": "https://store.example/gpu.jpg",
             "url": "https://www.promobit.com.br/oferta/rtx-5060/",
+            "source": "promobit",
         }
 
     def test_formats_offer_details_in_brazilian_currency(self):
@@ -24,6 +25,7 @@ class TelegramOfferTests(unittest.TestCase):
         self.assertIn("Cupom: GPU10", message)
         self.assertIn("Loja: Loja Exemplo", message)
         self.assertIn(self.offer["url"], message)
+        self.assertIn("Fonte: Promobit", message)
 
     @patch("src.notifier.urlopen")
     def test_sends_offer_with_product_image(self, urlopen):

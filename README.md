@@ -1,8 +1,10 @@
 # Garimpo de hardware
 
-Monitor de ofertas recentes para placas de vídeo RTX 5060 e RTX 5060 Ti 8 GB, placas-mãe LGA 1851 e memórias DDR5. A cada execução, busca promoções ativas no Promobit e envia pelo Telegram apenas ofertas de produtos compatíveis, com preço, loja e link da publicação. Quando disponíveis, também inclui imagem e cupom.
+Monitor de ofertas recentes para placas de vídeo RTX 5060 e RTX 5060 Ti 8 GB, placas-mãe LGA 1851 e memórias DDR5. A cada execução, busca promoções no Promobit e no Bilômetro e envia pelo Telegram apenas ofertas compatíveis, com preço, loja e link. Quando disponíveis, também inclui imagem e cupom.
 
-> O Promobit é uma comunidade de ofertas: disponibilidade, frete, cupons e preços podem mudar. O link abre a publicação no Promobit, onde você pode conferir os detalhes e seguir para a loja.
+> Disponibilidade, frete, cupons e preços podem mudar. Ofertas do Promobit abrem a publicação para conferir os detalhes; as do Bilômetro usam o link de compra compartilhado por essa fonte.
+>
+> Essas fontes agregam anúncios de varejistas como Mercado Livre, KaBuM!, Pichau, TerabyteShop, Magalu e Shopee quando publicados. O monitor não consulta diretamente as APIs privadas de cada loja, então a cobertura depende das ofertas encontradas nos agregadores.
 
 ## Executar localmente
 
@@ -32,11 +34,11 @@ O modo de simulação imprime as ofertas sem exigir dados do Telegram nem gravar
 
    O token é solicitado sem aparecer na tela e removido do ambiente ao final. Não publique nem compartilhe o token. Se o resultado vier vazio, envie outra mensagem ao bot e consulte novamente.
 
-Edite [`config/items.json`](./config/items.json) para personalizar itens, buscas e palavras que devem ser excluídas. O programa usa a lista de ofertas ativas do Promobit e ignora resultados sem preço, loja ou publicação.
+Edite [`config/items.json`](./config/items.json) para personalizar itens, buscas e palavras que devem ser excluídas. O monitor procura ofertas publicadas por ambas as fontes e ignora resultados sem preço ou link de compra/publicação.
 
 ## Fonte de ofertas
 
-A coleta usa o endpoint de busca público consumido pelo site do Promobit. Esse endpoint não tem contrato público de estabilidade e pode mudar ou limitar consultas; se isso acontecer, a execução falhará visivelmente no log do GitHub Actions. A resposta limita os resultados disponíveis, então o monitor só pode alertar promoções que o Promobit retornar para cada busca.
+A coleta usa endpoints públicos consumidos pelos sites do Promobit e do Bilômetro. Eles não têm contrato público de estabilidade e podem mudar ou limitar consultas; se isso acontecer, a execução falhará visivelmente no log do GitHub Actions. Cada fonte limita os resultados disponibilizados ao monitor. O Pelando retornou HTTP 403 ao GitHub Actions, e o Zoom/Buscapé não foi integrado por não termos identificado uma API pública documentada apropriada para este fluxo.
 
 ## GitHub Actions
 
@@ -50,6 +52,6 @@ O histórico de links já notificados é guardado no cache do Actions para reduz
 
 ### Custo e confiabilidade
 
-Para repositórios públicos, os runners padrão do GitHub Actions normalmente não consomem minutos pagos. Em repositórios privados, o uso depende da franquia e do plano; a cada cinco minutos podem ocorrer até 8.640 execuções por mês, portanto não há garantia de custo zero em uma conta privada. O workflow consulta o Promobit em cada execução. O Telegram é um serviço externo e suas condições podem mudar.
+Para repositórios públicos, os runners padrão do GitHub Actions normalmente não consomem minutos pagos. Em repositórios privados, o uso depende da franquia e do plano; a cada cinco minutos podem ocorrer até 8.640 execuções por mês, portanto não há garantia de custo zero em uma conta privada. O workflow consulta as duas fontes em cada execução. O Telegram é um serviço externo e suas condições podem mudar.
 
 O GitHub pode atrasar ou descartar execuções agendadas em períodos de alta demanda. Portanto, o intervalo de cinco minutos é uma frequência solicitada, não uma garantia de execução pontual.
