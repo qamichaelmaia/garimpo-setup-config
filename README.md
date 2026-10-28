@@ -42,7 +42,7 @@ A coleta usa endpoints públicos consumidos pelos sites do Promobit e do Bilôme
 
 ## GitHub Actions
 
-O workflow `.github/workflows/garimpo.yml` agenda execuções a cada cinco minutos, todos os dias, e também pode ser iniciado manualmente pela aba **Actions**. Para habilitá-lo:
+O workflow `.github/workflows/garimpo.yml` agenda execuções a cada 20 minutos, todos os dias, e também pode ser iniciado manualmente pela aba **Actions**. Para habilitá-lo:
 
 1. Envie o projeto para o GitHub e deixe o workflow na branch padrão do repositório.
 2. Em **Settings → Secrets and variables → Actions**, crie os secrets `TELEGRAM_BOT_TOKEN` (token do BotFather) e `TELEGRAM_CHAT_ID` (ID obtido na etapa acima).
@@ -52,6 +52,6 @@ O histórico de links já notificados é guardado no cache do Actions para reduz
 
 ### Custo e confiabilidade
 
-Para repositórios públicos, os runners padrão do GitHub Actions normalmente não consomem minutos pagos. Em repositórios privados, o uso depende da franquia e do plano; a cada cinco minutos podem ocorrer até 8.640 execuções por mês, portanto não há garantia de custo zero em uma conta privada. O workflow consulta as duas fontes em cada execução. O Telegram é um serviço externo e suas condições podem mudar.
+Para repositórios públicos, os runners padrão do GitHub Actions normalmente não consomem minutos pagos. Em repositórios privados, o uso depende da franquia e do plano; a cada 20 minutos podem ocorrer cerca de 2.160 execuções em um mês de 30 dias, portanto não há garantia de custo zero em uma conta privada. O workflow consulta as duas fontes em cada execução. O Telegram é um serviço externo e suas condições podem mudar.
 
-O GitHub pode atrasar ou descartar execuções agendadas em períodos de alta demanda. Portanto, o intervalo de cinco minutos é uma frequência solicitada, não uma garantia de execução pontual.
+O GitHub pode atrasar ou descartar execuções agendadas em períodos de alta demanda. Portanto, o intervalo de 20 minutos é uma frequência solicitada, não uma garantia de execução pontual.
