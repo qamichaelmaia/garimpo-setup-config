@@ -11,6 +11,15 @@ PROMOBIT_SITE_BASE = "https://www.promobit.com.br"
 PROMOBIT_IMAGE_BASE = "https://i.promobit.com.br/268"
 BILOMETRO_API_BASE = "https://bilometro-api-583495244408.us-east1.run.app"
 BILOMETRO_PAGE_LIMIT = 100
+OLD_PRICE_FIELDS = (
+    "offer_old_price",
+    "offer_original_price",
+    "old_price",
+    "original_price",
+    "oldPrice",
+    "originalPrice",
+    "priceBefore",
+)
 
 
 def _search_offers(query: str) -> list[dict]:
@@ -70,14 +79,35 @@ def _search_bilometro_promotions() -> list[dict]:
 def _parse_price(text: str | None) -> float | None:
     if not text:
         return None
-    match = re.search(r"R\$\s*([\d.]+(?:,\d{2})?)", text, re.IGNORECASE)
-    if not match:
+    matches = re.findall(r"R\$\s*([\d.]+(?:,\d{2})?)", text, re.IGNORECASE)
+    if not matches:
         return None
-    number = match.group(1).replace(".", "").replace(",", ".")
+    number = matches[-1] if re.search(r"\bpor\b", text, re.IGNORECASE) else matches[0]
+    number = number.replace(".", "").replace(",", ".")
     try:
         return float(number)
     except ValueError:
         return None
+
+
+def _extract_old_price(offer: dict, price_details: str | None = None) -> float | None:
+    for field in OLD_PRICE_FIELDS:
+        value = offer.get(field)
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            if value > 0:
+                return float(value)
+        elif isinstance(value, str):
+            price = _parse_price(value)
+            if price is not None:
+                return price
+
+    if price_details and re.search(r"\bde\b.*\bpor\b", price_details, re.IGNORECASE):
+        matches = re.findall(
+            r"R\$\s*([\d.]+(?:,\d{2})?)", price_details, re.IGNORECASE
+        )
+        if len(matches) >= 2:
+            return _parse_price(f"R$ {matches[0]}")
+    return None
 
 
 def _normalize(text: str) -> str:
@@ -142,6 +172,30 @@ def _image_url(path: str | None) -> str | None:
     return f"{PROMOBIT_IMAGE_BASE}/{path.lstrip('/')}"
 
 
+def _mega_discount_threshold(title: str, item: dict) -> float | None:
+    rules = item.get("mega_discount_rules", [])
+    if not isinstance(rules, list):
+        raise ValueError(f"As regras de mega desconto de {item['name']!r} são inválidas.")
+
+    for rule in rules:
+        if not isinstance(rule, dict):
+            raise ValueError(f"As regras de mega desconto de {item['name']!r} são inválidas.")
+        keywords = rule.get("required_any_keywords")
+        threshold = rule.get("below_price")
+        if (
+            not isinstance(keywords, list)
+            or not keywords
+            or not all(isinstance(keyword, str) and keyword for keyword in keywords)
+            or not isinstance(threshold, (int, float))
+            or isinstance(threshold, bool)
+            or threshold <= 0
+        ):
+            raise ValueError(f"As regras de mega desconto de {item['name']!r} são inválidas.")
+        if any(_contains_keyword(title, keyword) for keyword in keywords):
+            return float(threshold)
+    return None
+
+
 def collect_offers(items: list[dict]) -> list[dict]:
     search_cache: dict[str, list[dict]] = {}
     candidates: dict[str, tuple[dict, dict]] = {}
@@ -186,6 +240,10 @@ def collect_offers(items: list[dict]) -> list[dict]:
                 "item": item["name"],
                 "title": offer["offer_title"],
                 "price": offer["offer_price"],
+                "old_price": _extract_old_price(offer),
+                "mega_discount_threshold": _mega_discount_threshold(
+                    offer["offer_title"], item
+                ),
                 "store": offer["store_name"],
                 "coupon_code": offer.get("offer_coupon"),
                 "image_url": _image_url(image_path) if isinstance(image_path, str) else None,
@@ -215,6 +273,8 @@ def collect_offers(items: list[dict]) -> list[dict]:
                     "item": item["name"],
                     "title": title,
                     "price": price,
+                    "old_price": _extract_old_price(promotion, promotion.get("priceDetails")),
+                    "mega_discount_threshold": _mega_discount_threshold(title, item),
                     "store": promotion.get("storeName", ""),
                     "coupon_code": promotion.get("couponCode"),
                     "image_url": promotion.get("imageUrl"),

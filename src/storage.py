@@ -17,10 +17,24 @@ class OfferStore:
             )
             """
         )
+        self.connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS mega_discount_alerts (
+                url TEXT PRIMARY KEY,
+                alerted_at TEXT NOT NULL
+            )
+            """
+        )
         self.connection.commit()
 
     def seen_urls(self) -> set[str]:
         rows = self.connection.execute("SELECT url FROM offers").fetchall()
+        return {row[0] for row in rows}
+
+    def seen_mega_discount_urls(self) -> set[str]:
+        rows = self.connection.execute(
+            "SELECT url FROM mega_discount_alerts"
+        ).fetchall()
         return {row[0] for row in rows}
 
     def mark_seen(self, offers: list[dict]) -> None:
@@ -31,6 +45,17 @@ class OfferStore:
         )
         cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
         self.connection.execute("DELETE FROM offers WHERE first_seen < ?", (cutoff,))
+        self.connection.execute(
+            "DELETE FROM mega_discount_alerts WHERE alerted_at < ?", (cutoff,)
+        )
+        self.connection.commit()
+
+    def mark_mega_discount_seen(self, offers: list[dict]) -> None:
+        now = datetime.now(timezone.utc).isoformat()
+        self.connection.executemany(
+            "INSERT OR IGNORE INTO mega_discount_alerts (url, alerted_at) VALUES (?, ?)",
+            [(offer["url"], now) for offer in offers if offer["url"]],
+        )
         self.connection.commit()
 
     def close(self) -> None:

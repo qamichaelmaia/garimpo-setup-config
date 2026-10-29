@@ -5,7 +5,7 @@ import sys
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
-from src.notifier import format_offer, send_telegram_offer
+from src.notifier import format_offer, is_mega_discount, send_telegram_offer
 from src.sources import collect_offers
 from src.storage import OfferStore
 
@@ -23,7 +23,7 @@ def _prioritize_offers(offers: list[dict], today: date | None = None) -> list[di
     def sort_key(offer: dict) -> tuple[int, int, float]:
         item_name = offer.get("item", "")
         item = item_name.casefold() if isinstance(item_name, str) else ""
-        if "5060 ti" in item:
+        if "5060 ti" in item or "rx 9060 xt" in item:
             item_priority = 0
         elif "5060" in item:
             item_priority = 1
@@ -75,8 +75,17 @@ def main() -> int:
     store = OfferStore(db_path)
     try:
         known_urls = store.seen_urls()
+        known_mega_discount_urls = store.seen_mega_discount_urls()
         new_offers = _prioritize_offers(
-            [offer for offer in offers if offer["url"] not in known_urls]
+            [
+                offer
+                for offer in offers
+                if offer["url"] not in known_urls
+                or (
+                    is_mega_discount(offer)
+                    and offer["url"] not in known_mega_discount_urls
+                )
+            ]
         )
         logging.info(
             "Coleta finalizada: %d resultados, %d novos.",
@@ -105,6 +114,8 @@ def main() -> int:
         for offer in new_offers:
             send_telegram_offer(offer, bot_token, chat_id)
             store.mark_seen([offer])
+            if is_mega_discount(offer):
+                store.mark_mega_discount_seen([offer])
         return 0
     finally:
         store.close()

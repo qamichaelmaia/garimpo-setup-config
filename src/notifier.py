@@ -7,12 +7,29 @@ def _format_price(price: float) -> str:
     return f"{price:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
+def is_mega_discount(offer: dict) -> bool:
+    threshold = offer.get("mega_discount_threshold")
+    return (
+        isinstance(threshold, (int, float))
+        and not isinstance(threshold, bool)
+        and offer["price"] < threshold
+    )
+
+
 def format_offer(offer: dict) -> str:
     source_names = {"promobit": "Promobit", "bilometro": "Bilômetro"}
     source_name = source_names.get(offer.get("source"), offer.get("source"))
+    old_price = offer.get("old_price")
+    show_old_price = (
+        isinstance(old_price, (int, float))
+        and not isinstance(old_price, bool)
+        and old_price > offer["price"]
+    )
     lines = [
+        "🔥 MEGA DESCONTO 🔥" if is_mega_discount(offer) else None,
         f'🛒 {offer["title"]}',
         f'🏪 Loja: {offer["store"]}' if offer.get("store") else None,
+        f'💸 De: R$ {_format_price(old_price)}' if show_old_price else None,
         f'✅ Por: R$ {_format_price(offer["price"])}',
         f'🎟️ Cupom: {offer["coupon_code"]}' if offer.get("coupon_code") else None,
         (

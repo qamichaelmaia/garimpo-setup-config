@@ -27,6 +27,30 @@ class TelegramOfferTests(unittest.TestCase):
         self.assertIn(self.offer["url"], message)
         self.assertIn("Fonte: Promobit", message)
 
+    def test_formats_old_and_current_prices_and_mega_discount(self):
+        offer = {
+            **self.offer,
+            "old_price": 3299.9,
+            "price": 2699.9,
+            "mega_discount_threshold": 2700,
+        }
+
+        message = format_offer(offer)
+
+        self.assertIn("🔥 MEGA DESCONTO 🔥", message)
+        self.assertIn("De: R$ 3.299,90", message)
+        self.assertIn("Por: R$ 2.699,90", message)
+
+    def test_does_not_mark_price_equal_to_threshold_as_mega_discount(self):
+        offer = {**self.offer, "price": 2700, "mega_discount_threshold": 2700}
+
+        self.assertNotIn("MEGA DESCONTO", format_offer(offer))
+
+    def test_does_not_show_old_price_when_it_is_not_higher(self):
+        offer = {**self.offer, "old_price": 2000}
+
+        self.assertNotIn("De: R$", format_offer(offer))
+
     @patch("src.notifier.urlopen")
     def test_sends_offer_with_product_image(self, urlopen):
         response = io.BytesIO(b'{"ok": true}')

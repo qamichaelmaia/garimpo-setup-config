@@ -3,14 +3,56 @@ import json
 import unittest
 from unittest.mock import patch
 
-from src.sources import _matches_item, _parse_price, collect_offers
+from src.sources import (
+    _extract_old_price,
+    _matches_item,
+    _mega_discount_threshold,
+    _parse_price,
+    collect_offers,
+)
 
 
 class CollectOffersTests(unittest.TestCase):
     def test_parses_bilometro_brazilian_prices(self):
         self.assertEqual(_parse_price("R$ 1.380"), 1380.0)
         self.assertEqual(_parse_price("R$ 2.499,90 no Pix"), 2499.9)
+        self.assertEqual(
+            _parse_price("De R$ 3.500,00 por R$ 2.499,90"), 2499.9
+        )
         self.assertIsNone(_parse_price("Preço não informado"))
+
+    def test_extracts_old_price_from_offer_fields_or_price_details(self):
+        self.assertEqual(_extract_old_price({"oldPrice": 3500}), 3500.0)
+        self.assertEqual(
+            _extract_old_price({}, "De R$ 3.500,00 por R$ 2.499,90"),
+            3500.0,
+        )
+        self.assertIsNone(_extract_old_price({}, "R$ 2.499,90 no Pix"))
+
+    def test_mega_discount_threshold_depends_on_gpu_capacity(self):
+        item = {
+            "name": "RTX 5060 Ti",
+            "mega_discount_rules": [
+                {
+                    "required_any_keywords": ["16GB", "16 GB"],
+                    "below_price": 3300,
+                },
+                {
+                    "required_any_keywords": ["8GB", "8 GB"],
+                    "below_price": 2700,
+                },
+            ],
+        }
+
+        self.assertEqual(
+            _mega_discount_threshold("RTX 5060 Ti 16GB", item), 3300
+        )
+        self.assertEqual(
+            _mega_discount_threshold("RTX 5060 Ti 8 GB", item), 2700
+        )
+        self.assertIsNone(
+            _mega_discount_threshold("RTX 5060 Ti", item)
+        )
 
     def test_product_filters_exclude_other_product_types(self):
         memory_item = {
@@ -59,6 +101,7 @@ class CollectOffersTests(unittest.TestCase):
     def test_rtx_5060_ti_filter_includes_8gb_and_16gb_cards(self):
         video_card_item = {
             "keywords": ["RTX 5060 Ti"],
+            "required_any_keywords": ["8GB", "8 GB", "16GB", "16 GB"],
             "exclude_keywords": ["PC Gamer", "notebook", "laptop"],
         }
 
@@ -68,8 +111,31 @@ class CollectOffersTests(unittest.TestCase):
         self.assertTrue(
             _matches_item("Placa de Vídeo RTX 5060 Ti 16GB", video_card_item)
         )
+        self.assertTrue(
+            _matches_item("Placa RTX 5060 Ti 8 GB", video_card_item)
+        )
+        self.assertFalse(
+            _matches_item("Placa RTX 5060 Ti", video_card_item)
+        )
         self.assertFalse(
             _matches_item("PC Gamer com RTX 5060 Ti 16GB", video_card_item)
+        )
+
+    def test_rx_9060_xt_filter_requires_16gb(self):
+        video_card_item = {
+            "keywords": ["RX 9060 XT"],
+            "required_any_keywords": ["16GB", "16 GB"],
+            "exclude_keywords": ["PC Gamer", "notebook", "laptop"],
+        }
+
+        self.assertTrue(
+            _matches_item("Radeon RX 9060 XT 16GB", video_card_item)
+        )
+        self.assertTrue(
+            _matches_item("Placa RX 9060 XT 16 GB", video_card_item)
+        )
+        self.assertFalse(
+            _matches_item("Placa RX 9060 XT 8GB", video_card_item)
         )
 
     def test_ventoinha_filter_excludes_cpu_coolers(self):
@@ -104,6 +170,7 @@ class CollectOffersTests(unittest.TestCase):
                     "offer_title": "Placa de Vídeo RTX 5060 8GB",
                     "offer_slug": "rtx-5060-8gb-1",
                     "offer_price": 2499,
+                    "offer_old_price": 2999,
                     "offer_coupon": "GPU10",
                     "offer_photo": "/gpu.jpg",
                     "offer_status_name": "APPROVED",
@@ -159,6 +226,7 @@ class CollectOffersTests(unittest.TestCase):
 
         self.assertEqual(len(offers), 1)
         self.assertEqual(offers[0]["store"], "Loja Exemplo")
+        self.assertEqual(offers[0]["old_price"], 2999.0)
         self.assertEqual(offers[0]["published_at"], "2026-10-28T11:00:00-0300")
         self.assertEqual(offers[0]["coupon_code"], "GPU10")
         self.assertEqual(offers[0]["image_url"], "https://i.promobit.com.br/268/gpu.jpg")

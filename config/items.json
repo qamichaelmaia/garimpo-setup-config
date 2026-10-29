@@ -8,6 +8,34 @@
       "5060Ti"
     ],
     "keywords": ["RTX 5060 Ti"],
+    "required_any_keywords": ["8GB", "8 GB", "16GB", "16 GB"],
+    "mega_discount_rules": [
+      {
+        "required_any_keywords": ["16GB", "16 GB"],
+        "below_price": 3300
+      },
+      {
+        "required_any_keywords": ["8GB", "8 GB"],
+        "below_price": 2700
+      }
+    ],
+    "exclude_keywords": ["PC Gamer", "notebook", "laptop"]
+  },
+  {
+    "name": "Placa de vídeo RX 9060 XT 16GB",
+    "queries": [
+      "RX 9060 XT 16GB",
+      "Radeon RX 9060 XT 16GB",
+      "RX 9060 XT"
+    ],
+    "keywords": ["RX 9060 XT"],
+    "required_any_keywords": ["16GB", "16 GB"],
+    "mega_discount_rules": [
+      {
+        "required_any_keywords": ["16GB", "16 GB"],
+        "below_price": 2700
+      }
+    ],
     "exclude_keywords": ["PC Gamer", "notebook", "laptop"]
   },
   {
@@ -22,13 +50,6 @@
     "keywords": ["placa mãe"],
     "required_keywords": ["LGA 1851", "DDR5"],
     "exclude_keywords": ["processador", "cooler"]
-  },
-  {
-    "name": "Memória DDR5",
-    "query": "RAM DDR5",
-    "keywords": ["DDR5"],
-    "required_keywords": ["memória"],
-    "exclude_keywords": ["notebook", "laptop", "placa mãe", "motherboard"]
   },
   {
     "name": "Fonte 650W a 800W",
