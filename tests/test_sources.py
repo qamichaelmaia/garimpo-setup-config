@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from src.notifier import is_mega_discount
 from src.sources import (
     _extract_old_price,
     _matches_item,
@@ -14,6 +15,61 @@ from src.sources import (
 
 
 class CollectOffersTests(unittest.TestCase):
+    @patch("src.sources._search_bilometro_promotions")
+    @patch("src.sources._search_offers")
+    def test_rtx_5060_ti_16gb_price_boundaries_on_both_sources(
+        self, search_offers, search_promotions
+    ):
+        config_path = Path(__file__).resolve().parent.parent / "config" / "items.json"
+        items = json.loads(config_path.read_text(encoding="utf-8"))
+        items = [item for item in items if "RTX 5060 Ti" in item["name"]]
+        cases = [
+            ("mega", "Placa RTX 5060 Ti 16GB", 3999.99),
+            ("mega-limit", "Placa RTX 5060 Ti 16 GB", 4000),
+            ("max", "Placa RTX 5060 Ti 16GB", 4200),
+            ("above", "Placa RTX 5060 Ti 16GB", 4200.01),
+            ("8gb", "Placa RTX 5060 Ti 8GB", 4500),
+            ("8gb-mega", "Placa RTX 5060 Ti 8 GB", 2699.99),
+        ]
+        search_offers.return_value = [
+            {
+                "offer_title": title,
+                "offer_slug": slug,
+                "offer_price": price,
+                "store_name": "Loja Exemplo",
+            }
+            for slug, title, price in cases
+        ]
+        search_promotions.return_value = [
+            {
+                "gameName": title,
+                "purchaseLink": f"https://example.com/{slug}",
+                "priceDetails": f"R$ {price:.2f}".replace(".", ","),
+                "status": "SENT",
+            }
+            for slug, title, price in cases
+        ]
+
+        offers = collect_offers(items)
+
+        self.assertEqual(len(offers), 10)
+        expected = {
+            (3999.99, True),
+            (4000, False),
+            (4200, False),
+            (4500, False),
+            (2699.99, True),
+        }
+        for source in ("promobit", "bilometro"):
+            self.assertEqual(
+                {
+                    (offer["price"], is_mega_discount(offer))
+                    for offer in offers if offer["source"] == source
+                },
+                expected,
+            )
+        self.assertEqual(search_offers.call_count, 4)
+
     @patch("src.sources._search_bilometro_promotions")
     @patch("src.sources._search_offers")
     def test_rtx_5070_limit_and_model_filters_apply_to_both_sources(

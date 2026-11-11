@@ -1,6 +1,6 @@
 [
   {
-    "name": "Placa de vídeo RTX 5060 Ti",
+    "name": "Placa de vídeo RTX 5060 Ti 16GB",
     "queries": [
       "RTX 5060 Ti",
       "RTX 5060 Ti 8GB",
@@ -8,18 +8,33 @@
       "5060Ti"
     ],
     "keywords": ["RTX 5060 Ti"],
-    "required_any_keywords": ["8GB", "8 GB", "16GB", "16 GB"],
+    "required_any_keywords": ["16GB", "16 GB"],
+    "max_price": 4200,
     "mega_discount_rules": [
       {
         "required_any_keywords": ["16GB", "16 GB"],
-        "below_price": 3300
-      },
+        "below_price": 4000
+      }
+    ],
+    "exclude_keywords": ["PC Gamer", "notebook", "laptop"]
+  },
+  {
+    "name": "Placa de vídeo RTX 5060 Ti 8GB",
+    "queries": [
+      "RTX 5060 Ti",
+      "RTX 5060 Ti 8GB",
+      "RTX 5060 Ti 16GB",
+      "5060Ti"
+    ],
+    "keywords": ["RTX 5060 Ti"],
+    "required_any_keywords": ["8GB", "8 GB"],
+    "mega_discount_rules": [
       {
         "required_any_keywords": ["8GB", "8 GB"],
         "below_price": 2700
       }
     ],
-    "exclude_keywords": ["PC Gamer", "notebook", "laptop"]
+    "exclude_keywords": ["16GB", "16 GB", "PC Gamer", "notebook", "laptop"]
   },
   {
     "name": "Placa de vídeo RX 9060 XT 16GB",
