@@ -39,6 +39,14 @@
     "exclude_keywords": ["PC Gamer", "notebook", "laptop"]
   },
   {
+    "name": "Placa de vídeo RTX 5070 12GB",
+    "queries": ["RTX 5070", "RTX 5070 12GB", "RTX 5070 12 GB"],
+    "keywords": ["RTX 5070"],
+    "required_any_keywords": ["12GB", "12 GB"],
+    "max_price": 5000,
+    "exclude_keywords": ["RTX 5070 Ti", "PC Gamer", "notebook", "laptop"]
+  },
+  {
     "name": "Placa de vídeo RTX 5060",
     "query": "RTX 5060",
     "keywords": ["RTX 5060"],

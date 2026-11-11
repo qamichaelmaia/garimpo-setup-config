@@ -2,6 +2,8 @@
 
 Monitor de ofertas recentes para placas de vídeo RTX 5060, RTX 5060 Ti de 8 GB ou 16 GB e RX 9060 XT de 16 GB, placas-mãe LGA 1851 DDR5, fontes de 650 W a 800 W, gabinetes e fans/ventoinhas de PC. A cada execução, busca promoções no Promobit e no Bilômetro e envia pelo Telegram apenas ofertas compatíveis, com preço atual, loja e link. Quando a fonte informa o preço anterior, ele também aparece no alerta. As placas de vídeo recebem a indicação **MEGA DESCONTO** quando o preço atual fica abaixo destes limites: RTX 5060 Ti 16 GB por R$ 3.300, RTX 5060 Ti 8 GB por R$ 2.700 e RX 9060 XT 16 GB por R$ 2.700. A indicação é enviada uma vez por anúncio quando ele fica abaixo do limite, mesmo que o link já tenha sido notificado antes. As RTX 5060 Ti e RX 9060 XT são priorizadas nos alertas, começando pelas ofertas publicadas no dia da execução. Quando disponíveis, também inclui imagem e cupom.
 
+Também monitora a RTX 5070 de 12 GB por **até R$ 5.000**, inclusive. Ofertas acima desse valor não são enviadas; a regra não se aplica à RTX 5070 Ti.
+
 > Disponibilidade, frete, cupons e preços podem mudar. Ofertas do Promobit abrem a publicação para conferir os detalhes; as do Bilômetro usam o link de compra compartilhado por essa fonte.
 >
 > Essas fontes agregam anúncios de varejistas como Mercado Livre, KaBuM!, Pichau, TerabyteShop, Magalu e Shopee quando publicados. O monitor não consulta diretamente as APIs privadas de cada loja, então a cobertura depende das ofertas encontradas nos agregadores.
@@ -34,7 +36,7 @@ O modo de simulação imprime as ofertas sem exigir dados do Telegram nem gravar
 
    O token é solicitado sem aparecer na tela e removido do ambiente ao final. Não publique nem compartilhe o token. Se o resultado vier vazio, envie outra mensagem ao bot e consulte novamente.
 
-Edite [`config/items.json`](./config/items.json) para personalizar itens, buscas e palavras que devem ser excluídas. Um item pode usar uma busca (`query`) ou várias (`queries`). O monitor procura ofertas publicadas por ambas as fontes e ignora resultados sem preço ou link de compra/publicação.
+Edite [`config/items.json`](./config/items.json) para personalizar itens, buscas e palavras que devem ser excluídas. Um item pode usar uma busca (`query`) ou várias (`queries`) e, opcionalmente, um preço máximo inclusivo (`max_price`). O monitor procura ofertas publicadas por ambas as fontes e ignora resultados sem preço ou link de compra/publicação.
 
 ## Fonte de ofertas
 

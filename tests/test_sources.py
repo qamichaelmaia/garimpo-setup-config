@@ -1,6 +1,7 @@
 import io
 import json
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from src.sources import (
@@ -13,6 +14,68 @@ from src.sources import (
 
 
 class CollectOffersTests(unittest.TestCase):
+    @patch("src.sources._search_bilometro_promotions")
+    @patch("src.sources._search_offers")
+    def test_rtx_5070_limit_and_model_filters_apply_to_both_sources(
+        self, search_offers, search_promotions
+    ):
+        config_path = Path(__file__).resolve().parent.parent / "config" / "items.json"
+        items = json.loads(config_path.read_text(encoding="utf-8"))
+        item = next(item for item in items if item["name"] == "Placa de vídeo RTX 5070 12GB")
+        cases = [
+            ("below", "Placa RTX 5070 12GB", 4999.99),
+            ("limit", "Placa RTX 5070 12 GB", 5000),
+            ("above", "Placa RTX 5070 12GB", 5000.01),
+            ("ti", "Placa RTX 5070 Ti 12GB", 4500),
+            ("memory", "Placa RTX 5070 8GB", 4500),
+            ("laptop", "Notebook RTX 5070 12GB", 4500),
+            ("pc", "PC Gamer RTX 5070 12GB", 4500),
+        ]
+        search_offers.return_value = [
+            {
+                "offer_title": title,
+                "offer_slug": slug,
+                "offer_price": price,
+                "store_name": "Loja Exemplo",
+            }
+            for slug, title, price in cases
+        ]
+        search_promotions.return_value = [
+            {
+                "gameName": title,
+                "purchaseLink": f"https://example.com/{slug}",
+                "priceDetails": f"R$ {price:.2f}".replace(".", ","),
+                "status": "SENT",
+            }
+            for slug, title, price in cases
+        ]
+
+        offers = collect_offers([item])
+
+        self.assertEqual(len(offers), 4)
+        self.assertEqual(
+            {(offer["source"], offer["price"]) for offer in offers},
+            {
+                ("promobit", 4999.99),
+                ("promobit", 5000),
+                ("bilometro", 4999.99),
+                ("bilometro", 5000),
+            },
+        )
+
+    @patch("src.sources._search_bilometro_promotions", return_value=[])
+    def test_rejects_invalid_max_price(self, search_promotions):
+        for price in (None, True, 0, -1, "5000", float("nan")):
+            with self.subTest(price=price):
+                item = {
+                    "name": "Teste",
+                    "query": "teste",
+                    "keywords": ["teste"],
+                    "max_price": price,
+                }
+                with self.assertRaisesRegex(ValueError, "preço máximo"):
+                    collect_offers([item])
+
     def test_parses_bilometro_brazilian_prices(self):
         self.assertEqual(_parse_price("R$ 1.380"), 1380.0)
         self.assertEqual(_parse_price("R$ 2.499,90 no Pix"), 2499.9)

@@ -1,4 +1,5 @@
 import json
+import math
 import re
 import unicodedata
 from urllib.error import HTTPError
@@ -215,6 +216,15 @@ def collect_offers(items: list[dict]) -> list[dict]:
             raise ValueError(f"O item {item['name']!r} precisa ter buscas válidas.")
         if not isinstance(item.get("keywords"), list) or not item["keywords"]:
             raise ValueError(f"O item {item['name']!r} precisa ter palavras-chave.")
+        if "max_price" in item:
+            max_price = item["max_price"]
+            if (
+                not isinstance(max_price, (int, float))
+                or isinstance(max_price, bool)
+                or not math.isfinite(max_price)
+                or max_price <= 0
+            ):
+                raise ValueError(f"O preço máximo de {item['name']!r} é inválido.")
 
         for query in queries:
             if query not in search_cache:
@@ -228,6 +238,10 @@ def collect_offers(items: list[dict]) -> list[dict]:
                     and isinstance(slug, str)
                     and _is_active_offer(offer)
                     and _matches_item(title, item)
+                    and (
+                        "max_price" not in item
+                        or offer["offer_price"] <= item["max_price"]
+                    )
                 ):
                     candidates.setdefault(slug, (item, offer))
 
@@ -265,6 +279,7 @@ def collect_offers(items: list[dict]) -> list[dict]:
                 or promotion.get("status") != "SENT"
                 or price is None
                 or not _matches_item(title, item)
+                or ("max_price" in item and price > item["max_price"])
             ):
                 continue
 
